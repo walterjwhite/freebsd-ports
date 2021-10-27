@@ -2,7 +2,7 @@
 # Vadim Zhukov <zhuk@openbsd.org>
 
 PORTNAME=	intellij
-PORTVERSION=	2020.2.3
+PORTVERSION=	2021.2.3
 CATEGORIES=	java devel
 MASTER_SITES=	https://download-cf.jetbrains.com/idea/
 DISTNAME=	ideaIC-${PORTVERSION}-no-jbr
@@ -15,27 +15,33 @@ LICENSE=	APACHE20
 
 RUN_DEPENDS=	intellij-fsnotifier>0:java/intellij-fsnotifier
 
-USES=		cpe python:run shebangfix
-CPE_VENDOR=	jetbrains
-CPE_PRODUCT=	${PORTNAME}_idea
+USES=		python:run shebangfix
 
 USE_JAVA=	yes
-JAVA_VERSION=	8+
+JAVA_VERSION=	11+
 
 SHEBANG_FILES=	bin/printenv.py bin/restart.py
+
+CONFLICTS=	intellij-ultimate-*
 
 NO_ARCH=	yes
 NO_ARCH_IGNORE=	libjansi.so
 NO_BUILD=	yes
-
-WRKSRC=		${WRKDIR}/idea-IC-202.7660.26
-
 SUB_FILES=	idea idea.desktop pkg-message
-CONFLICTS=	intellij-ultimate-*
 
-do-install:
+BUILD_TYPE=	IC
+BUILD_VERSION=	212.5457.46
+BUILD_MARKER=	${BUILD_TYPE}-${BUILD_VERSION}
+PLIST_SUB=	BUILD_MARKER=${BUILD_MARKER}
+WRKSRC=		${WRKDIR}/idea-${BUILD_MARKER}
+
+WRKSRC=		${WRKDIR}/idea-IC-${BUILD_VERSION}
+
+post-patch:
+	@${REINPLACE_CMD} 's/x86_64/amd64/g' ${WRKSRC}/bin/idea.sh
 # Linux/Windows/OS X only so remove them
-	@${RM} -r ${WRKSRC}/bin/fsnotifier \
+	@${RM} -r \
+        ${WRKSRC}/bin/fsnotifier \
 		${WRKSRC}/bin/fsnotifier-arm \
 		${WRKSRC}/bin/fsnotifier64 \
 		${WRKSRC}/lib/pty4j-native/ \
@@ -46,9 +52,11 @@ do-install:
 		${WRKSRC}/plugins/maven/lib/maven3/lib/jansi-native/windows32/ \
 		${WRKSRC}/plugins/maven/lib/maven3/lib/jansi-native/windows64/ \
 		${WRKSRC}/plugins/performanceTesting/bin/
+
+do-install:
 	${MKDIR} ${STAGEDIR}${DATADIR}
 	@(cd ${WRKSRC} && ${COPYTREE_SHARE} . ${STAGEDIR}${DATADIR} \
-		"! -name *\.so ! -name *\.dll ! -name *\.dylib ! -name *\.pdb ! -name *\.sh")
+		"! -name *\.bak ! -name *\.so ! -name *\.dll ! -name *\.dylib ! -name *\.pdb ! -name *\.sh")
 	@(cd ${WRKSRC} && ${COPYTREE_BIN} . ${STAGEDIR}${DATADIR} "-name *\.sh")
 	${INSTALL_LIB} ${WRKSRC}/plugins/maven/lib/maven3/lib/jansi-native/freebsd32/libjansi.so \
 		${STAGEDIR}${DATADIR}/plugins/maven/lib/maven3/lib/jansi-native/freebsd32/
